@@ -1,0 +1,95 @@
+#!/bin/bash -x
+
+# logs saved at:
+# /var/log/cloud-init-output.log
+
+echo "beginning"
+
+TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
+
+PUBLIC_DNS=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -v http://169.254.169.254/latest/meta-data/public-hostname)
+
+echo "Public DNS available at: $PUBLIC_DNS"
+
+sudo apt-get update
+sudo apt install jq -y
+sudo apt-get install -y docker.io openssl
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker ubuntu
+newgrp docker
+
+
+echo "adding insecure registries to docker"
+cat <<EOF | sudo tee /etc/docker/daemon.json
+{
+  "insecure-registries": ["$PUBLIC_DNS:5000"]
+}
+EOF
+echo "restarting docker"
+sudo systemctl restart docker
+
+echo "changing to home dir"
+cd /home/ubuntu
+echo "current dir: "
+echo $(pwd)
+echo "listing files in current dir"
+echo $(ls)
+
+echo "creating volume dir at /home/ubuntu"
+sudo mkdir volume
+echo "changing permissions"
+sudo chmod +rw volume
+
+# Step 2: Generate Private Key and Certificate
+echo "Generating TLS certificates"
+sudo mkdir -p /home/ubuntu/certs
+
+# Create the OpenSSL configuration file
+cat > domain.conf <<EOF
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = v3_req
+prompt = no
+
+[req_distinguished_name]
+CN = $PUBLIC_DNS
+
+[v3_req]
+keyUsage = keyEncipherment, dataEncipherment
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = $PUBLIC_DNS
+EOF
+
+# Generate the certificate and key
+openssl req -newkey rsa:4096 -nodes -sha256 -keyout /home/ubuntu/certs/domain.key -x509 -days 365 -out /home/ubuntu/certs/domain.crt -config domain.conf -extensions v3_req
+
+# openssl req -newkey rsa:4096 -nodes -sha256 -keyout /home/ubuntu/certs/domain.key -x509 -days 365 -out /home/ubuntu/certs/domain.crt -subj "/CN=$PUBLIC_DNS"
+
+docker run -d --restart=always \
+        -p 5000:5000 \
+        --name "defaultregistry" \
+        -v /home/ubuntu/certs:/certs \
+        -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
+        -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
+        -e REGISTRY_HTTP_ADDR=0.0.0.0:5000 \
+        -v /home/ubuntu/volume:/var/lib/registry \
+        registry:2
+
+echo "updating file permissions"
+sudo chmod +r rancher-images.txt
+sudo chmod +x rancher-save-images.sh
+sudo chmod +x rancher-load-images.sh
+echo ls -lah
+
+
+echo "executing rancher-save-images.sh"
+./rancher-save-images.sh --image-list ./rancher-images.txt
+echo "executing rancher-load-images.sh"
+./rancher-load-images.sh --image-list ./rancher-images.txt --registry "$PUBLIC_DNS:5000"
+
+
+curl https://localhost:5000/v2/_catalog --insecure | jq '.'
