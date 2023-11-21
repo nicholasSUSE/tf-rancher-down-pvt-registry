@@ -59,6 +59,46 @@ flowchart TB
 
 ---
 
+## References
+
+All this information was needed to build this project at some point.
+
+### Rancher
+- https://ranchermanager.docs.rancher.com/getting-started/installation-and-upgrade/installation-requirements/install-docker
+
+### RKE
+
+- https://ranchermanager.docs.rancher.com/reference-guides/cluster-configuration/rancher-server-configuration/rke1-cluster-configuration
+- https://rke.docs.rancher.com/example-yamls
+- https://rke.docs.rancher.com/config-options/nodes
+- https://rke.docs.rancher.com/config-options/private-registries
+- https://rke.docs.rancher.com/config-options/system-images
+
+### K3s
+
+- https://docs.k3s.io/installation/private-registry
+
+### Private Registry
+
+- https://distribution.github.io/distribution/
+- https://hub.docker.com/_/registry
+- https://distribution.github.io/distribution/spec/api/
+- https://forums.rancher.com/t/private-docker-registry-x509-certificate-signed-by-unknown-authority/19563
+
+### Terraform
+- https://registry.terraform.io/providers/rancher/rancher2/latest/docs/resources/app_v2
+- https://registry.terraform.io/providers/rancher/rancher2/latest/docs/resources/cluster_sync
+- https://registry.terraform.io/providers/rancher/rancher2/latest/docs/resources/cluster_v2
+- https://github.com/rancher/terraform-provider-rancher2/issues/478
+- https://developer.hashicorp.com/terraform/cli/config/config-file#development-overrides-for-provider-developers
+
+#### Useful tutorials
+- https://medium.com/@chfrank_cgn/using-rancher-and-terraform-to-deploy-a-kubernetes-cluster-on-ovirt-in-minutes-bbe802788834
+- https://medium.com/@deekonda.ajay/create-your-own-secured-docker-private-registry-with-ssl-6a44539f74b8
+
+
+---
+
 ## Debugging Utilities
 
 ### K3s Images for Bundled mode
